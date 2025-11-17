@@ -195,7 +195,8 @@ int opencl_execute_feature_extraction_kernel(opencl_context_t *ctx,
                                             size_t num_flows) {
     cl_int err;
     size_t global_work_size = num_flows;
-    size_t local_work_size = (num_flows < 256) ? num_flows : 256; // Ensure local size doesn't exceed global
+    // Let OpenCL runtime choose the local work size to avoid CL_INVALID_WORK_GROUP_SIZE
+    const size_t *local_work_size_ptr = NULL;
     
     err = clSetKernelArg(ctx->feature_extraction_kernel, 0, sizeof(cl_mem), &flow_data->buffer);
     CHECK_OPENCL_ERROR(err, "Failed to set kernel arg 0");
@@ -204,8 +205,12 @@ int opencl_execute_feature_extraction_kernel(opencl_context_t *ctx,
     CHECK_OPENCL_ERROR(err, "Failed to set kernel arg 1");
     
     err = clEnqueueNDRangeKernel(ctx->command_queue, ctx->feature_extraction_kernel, 1, NULL,
-                                &global_work_size, &local_work_size, 0, NULL, NULL);
+                                &global_work_size, local_work_size_ptr, 0, NULL, NULL);
     CHECK_OPENCL_ERROR(err, "Failed to execute feature extraction kernel");
+    
+    // Ensure kernel completion so wall-clock timing includes GPU execution
+    err = clFinish(ctx->command_queue);
+    CHECK_OPENCL_ERROR(err, "Failed to finish command queue after feature extraction kernel");
     
     return 0;
 }
@@ -216,11 +221,14 @@ int opencl_execute_svm_kernel(opencl_context_t *ctx,
                              opencl_buffer_t *svm_support_vectors,
                              opencl_buffer_t *svm_bias,
                              opencl_buffer_t *predictions,
-                             size_t num_samples, size_t num_features, 
-                             size_t num_support_vectors, float gamma) {
+                             unsigned int num_samples,
+                             unsigned int num_features,
+                             unsigned int num_support_vectors,
+                             float gamma) {
     cl_int err;
     size_t global_work_size = num_samples;
-    size_t local_work_size = (num_samples < 256) ? num_samples : 256; // Ensure local size doesn't exceed global
+    // Let OpenCL runtime choose the local work size to avoid CL_INVALID_WORK_GROUP_SIZE
+    const size_t *local_work_size_ptr = NULL;
     
     err = clSetKernelArg(ctx->svm_inference_kernel, 0, sizeof(cl_mem), &features->buffer);
     CHECK_OPENCL_ERROR(err, "Failed to set kernel arg 0");
@@ -250,8 +258,12 @@ int opencl_execute_svm_kernel(opencl_context_t *ctx,
     CHECK_OPENCL_ERROR(err, "Failed to set kernel arg 8");
     
     err = clEnqueueNDRangeKernel(ctx->command_queue, ctx->svm_inference_kernel, 1, NULL,
-                                &global_work_size, &local_work_size, 0, NULL, NULL);
+                                &global_work_size, local_work_size_ptr, 0, NULL, NULL);
     CHECK_OPENCL_ERROR(err, "Failed to execute SVM kernel");
+    
+    // Ensure kernel completion so wall-clock timing includes GPU execution
+    err = clFinish(ctx->command_queue);
+    CHECK_OPENCL_ERROR(err, "Failed to finish command queue after SVM kernel");
     
     return 0;
 }
@@ -343,4 +355,19 @@ void opencl_print_device_info(cl_device_id device) {
     printf("  Compute Units: %u\n", compute_units);
     printf("  Global Memory: %llu MB\n", global_mem_size / (1024 * 1024));
     printf("  Max Work Group Size: %zu\n", max_work_group_size);
+}
+
+// Optional: NVML-based hardware GPU utilization (disabled unless USE_NVML is defined)
+int opencl_query_gpu_utilization(opencl_context_t *ctx, float *utilization_percent) {
+#ifdef USE_NVML
+    // Placeholder for NVML integration. Requires linking against NVML and including nvml.h.
+    // Return -1 to indicate not implemented in this build.
+    (void)ctx;
+    (void)utilization_percent;
+    return -1;
+#else
+    (void)ctx;
+    (void)utilization_percent;
+    return -1;
+#endif
 }

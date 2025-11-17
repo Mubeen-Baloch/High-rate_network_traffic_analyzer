@@ -6,86 +6,92 @@
 
 // CIC-DDoS2019 CSV column mapping
 typedef enum {
-    COL_SRC_IP = 0,
-    COL_DST_IP = 1,
-    COL_SRC_PORT = 2,
-    COL_DST_PORT = 3,
-    COL_PROTOCOL = 4,
-    COL_TIMESTAMP = 5,
-    COL_FLOW_DURATION = 6,
-    COL_TOTAL_FWD_PACKETS = 7,
-    COL_TOTAL_BWD_PACKETS = 8,
-    COL_TOTAL_FWD_BYTES = 9,
-    COL_TOTAL_BWD_BYTES = 10,
-    COL_FWD_PACKET_LENGTH_MAX = 11,
-    COL_FWD_PACKET_LENGTH_MIN = 12,
-    COL_FWD_PACKET_LENGTH_MEAN = 13,
-    COL_FWD_PACKET_LENGTH_STD = 14,
-    COL_BWD_PACKET_LENGTH_MAX = 15,
-    COL_BWD_PACKET_LENGTH_MIN = 16,
-    COL_BWD_PACKET_LENGTH_MEAN = 17,
-    COL_BWD_PACKET_LENGTH_STD = 18,
-    COL_FLOW_BYTES_PER_SEC = 19,
-    COL_FLOW_PACKETS_PER_SEC = 20,
-    COL_FLOW_IAT_MEAN = 21,
-    COL_FLOW_IAT_STD = 22,
-    COL_FLOW_IAT_MAX = 23,
-    COL_FLOW_IAT_MIN = 24,
-    COL_FWD_IAT_TOTAL = 25,
-    COL_FWD_IAT_MEAN = 26,
-    COL_FWD_IAT_STD = 27,
-    COL_FWD_IAT_MAX = 28,
-    COL_FWD_IAT_MIN = 29,
-    COL_BWD_IAT_TOTAL = 30,
-    COL_BWD_IAT_MEAN = 31,
-    COL_BWD_IAT_STD = 32,
-    COL_BWD_IAT_MAX = 33,
-    COL_BWD_IAT_MIN = 34,
-    COL_FWD_PSH_FLAGS = 35,
-    COL_BWD_PSH_FLAGS = 36,
-    COL_FWD_URG_FLAGS = 37,
-    COL_BWD_URG_FLAGS = 38,
-    COL_FWD_HEADER_LENGTH = 39,
-    COL_BWD_HEADER_LENGTH = 40,
-    COL_FWD_PACKETS_PER_SEC = 41,
-    COL_BWD_PACKETS_PER_SEC = 42,
-    COL_MIN_PACKET_LENGTH = 43,
-    COL_MAX_PACKET_LENGTH = 44,
-    COL_PACKET_LENGTH_MEAN = 45,
-    COL_PACKET_LENGTH_STD = 46,
-    COL_PACKET_LENGTH_VARIANCE = 47,
-    COL_FIN_FLAG_COUNT = 48,
-    COL_SYN_FLAG_COUNT = 49,
-    COL_RST_FLAG_COUNT = 50,
-    COL_PSH_FLAG_COUNT = 51,
-    COL_ACK_FLAG_COUNT = 52,
-    COL_URG_FLAG_COUNT = 53,
-    COL_CWE_FLAG_COUNT = 54,
-    COL_ECE_FLAG_COUNT = 55,
-    COL_DOWN_UP_RATIO = 56,
-    COL_AVG_PACKET_SIZE = 57,
-    COL_FWD_AVG_BYTES_PER_BULK = 58,
-    COL_FWD_AVG_PACKETS_PER_BULK = 59,
-    COL_FWD_AVG_BULK_RATE = 60,
-    COL_BWD_AVG_BYTES_PER_BULK = 61,
-    COL_BWD_AVG_PACKETS_PER_BULK = 62,
-    COL_BWD_AVG_BULK_RATE = 63,
-    COL_SUBFLOW_FWD_PACKETS = 64,
-    COL_SUBFLOW_BWD_PACKETS = 65,
-    COL_SUBFLOW_FWD_BYTES = 66,
-    COL_SUBFLOW_BWD_BYTES = 67,
-    COL_INIT_WIN_BYTES_FORWARD = 68,
-    COL_INIT_WIN_BYTES_BACKWARD = 69,
-    COL_ACT_DATA_PKT_FWD = 70,
-    COL_MIN_SEG_SIZE_FORWARD = 71,
-    COL_ACTIVE_MEAN = 72,
-    COL_ACTIVE_STD = 73,
-    COL_ACTIVE_MAX = 74,
-    COL_ACTIVE_MIN = 75,
-    COL_IDLE_MEAN = 76,
-    COL_IDLE_STD = 77,
-    COL_IDLE_MAX = 78,
-    COL_IDLE_MIN = 79,
+    // Note: Column 0 is 'Unnamed: 0' (ignored), 1 is 'Flow ID' (ignored)
+    COL_SRC_IP = 2,                 // ' Source IP'
+    COL_SRC_PORT = 3,               // ' Source Port'
+    COL_DST_IP = 4,                 // ' Destination IP'
+    COL_DST_PORT = 5,               // ' Destination Port'
+    COL_PROTOCOL = 6,               // ' Protocol'
+    COL_TIMESTAMP = 7,              // ' Timestamp'
+    COL_FLOW_DURATION = 8,          // ' Flow Duration'
+    COL_TOTAL_FWD_PACKETS = 9,      // ' Total Fwd Packets'
+    COL_TOTAL_BWD_PACKETS = 10,     // ' Total Backward Packets'
+    COL_TOTAL_FWD_BYTES = 11,       // 'Total Length of Fwd Packets'
+    COL_TOTAL_BWD_BYTES = 12,       // ' Total Length of Bwd Packets'
+
+    // Unused fields below are kept for completeness but may be out of sync with CSV spaces
+    COL_FWD_PACKET_LENGTH_MAX = 13,
+    COL_FWD_PACKET_LENGTH_MIN = 14,
+    COL_FWD_PACKET_LENGTH_MEAN = 15,
+    COL_FWD_PACKET_LENGTH_STD = 16,
+    COL_BWD_PACKET_LENGTH_MAX = 17,
+    COL_BWD_PACKET_LENGTH_MIN = 18,
+    COL_BWD_PACKET_LENGTH_MEAN = 19,
+    COL_BWD_PACKET_LENGTH_STD = 20,
+
+    COL_FLOW_BYTES_PER_SEC = 21,    // 'Flow Bytes/s'
+    COL_FLOW_PACKETS_PER_SEC = 22,  // ' Flow Packets/s'
+
+    COL_FLOW_IAT_MEAN = 23,
+    COL_FLOW_IAT_STD = 24,
+    COL_FLOW_IAT_MAX = 25,
+    COL_FLOW_IAT_MIN = 26,
+    COL_FWD_IAT_TOTAL = 27,
+    COL_FWD_IAT_MEAN = 28,
+    COL_FWD_IAT_STD = 29,
+    COL_FWD_IAT_MAX = 30,
+    COL_FWD_IAT_MIN = 31,
+    COL_BWD_IAT_TOTAL = 32,
+    COL_BWD_IAT_MEAN = 33,
+    COL_BWD_IAT_STD = 34,
+    COL_BWD_IAT_MAX = 35,
+    COL_BWD_IAT_MIN = 36,
+    COL_FWD_PSH_FLAGS = 37,
+    COL_BWD_PSH_FLAGS = 38,
+    COL_FWD_URG_FLAGS = 39,
+    COL_BWD_URG_FLAGS = 40,
+    COL_FWD_HEADER_LENGTH = 41,
+    COL_BWD_HEADER_LENGTH = 42,
+    COL_FWD_PACKETS_PER_SEC = 43,
+    COL_BWD_PACKETS_PER_SEC = 44,
+    COL_MIN_PACKET_LENGTH = 45,
+    COL_MAX_PACKET_LENGTH = 46,
+    COL_PACKET_LENGTH_MEAN = 47,
+    COL_PACKET_LENGTH_STD = 48,
+    COL_PACKET_LENGTH_VARIANCE = 49,
+    COL_FIN_FLAG_COUNT = 50,
+    COL_SYN_FLAG_COUNT = 51,
+    COL_RST_FLAG_COUNT = 52,
+    COL_PSH_FLAG_COUNT = 53,
+    COL_ACK_FLAG_COUNT = 54,
+    COL_URG_FLAG_COUNT = 55,
+    COL_CWE_FLAG_COUNT = 56,
+    COL_ECE_FLAG_COUNT = 57,
+    COL_DOWN_UP_RATIO = 58,
+    COL_AVG_PACKET_SIZE = 59,
+    COL_FWD_AVG_BYTES_PER_BULK = 60,
+    COL_FWD_AVG_PACKETS_PER_BULK = 61,
+    COL_FWD_AVG_BULK_RATE = 62,
+    COL_BWD_AVG_BYTES_PER_BULK = 63,
+    COL_BWD_AVG_PACKETS_PER_BULK = 64,
+    COL_BWD_AVG_BULK_RATE = 65,
+    COL_SUBFLOW_FWD_PACKETS = 69,
+    COL_SUBFLOW_FWD_BYTES = 70,
+    COL_SUBFLOW_BWD_PACKETS = 71,
+    COL_SUBFLOW_BWD_BYTES = 72,
+    COL_INIT_WIN_BYTES_FORWARD = 73,
+    COL_INIT_WIN_BYTES_BACKWARD = 74,
+    COL_ACT_DATA_PKT_FWD = 75,
+    COL_MIN_SEG_SIZE_FORWARD = 76,
+    COL_ACTIVE_MEAN = 77,
+    COL_ACTIVE_STD = 78,
+    COL_ACTIVE_MAX = 79,
+    COL_ACTIVE_MIN = 80,
+    COL_IDLE_MEAN = 81,
+    COL_IDLE_STD = 82,
+    COL_IDLE_MAX = 83,
+    COL_IDLE_MIN = 84,
+    // 85: 'SimillarHTTP', 86: ' Inbound'
     COL_LABEL = 87,
     COL_COUNT = 88
 } csv_column_t;
@@ -93,7 +99,6 @@ typedef enum {
 int parse_cic_ddos_csv(const char *filename, flow_collection_t *collection) {
     FILE *file;
     char line[4096];
-    char *token;
     int line_count = 0;
     int parsed_count = 0;
     
@@ -225,13 +230,28 @@ int parse_csv_line(const char *line, network_flow_t *flow) {
                 flow->flow_packets_per_sec = (uint32_t)strtoul(token, NULL, 10);
                 break;
             case COL_LABEL:
-                // Parse string label to numeric value
+                // Parse string label to numeric value (handle whitespace)
+                // Remove leading/trailing whitespace from token
+                while (*token == ' ' || *token == '\t') token++;
+                char *token_end = token + strlen(token) - 1;
+                while (token_end > token && (*token_end == ' ' || *token_end == '\t' || *token_end == '\r' || *token_end == '\n')) {
+                    *token_end = '\0';
+                    token_end--;
+                }
+                
                 if (strcmp(token, "BENIGN") == 0) {
                     flow->label = 0;  // Benign
                 } else if (strstr(token, "DrDoS") != NULL || 
                           strstr(token, "DDoS") != NULL ||
                           strstr(token, "Syn") != NULL ||
-                          strstr(token, "TFTP") != NULL) {
+                          strstr(token, "TFTP") != NULL ||
+                          strstr(token, "UDP") != NULL ||
+                          strstr(token, "LDAP") != NULL ||
+                          strstr(token, "MSSQL") != NULL ||
+                          strstr(token, "NetBIOS") != NULL ||
+                          strstr(token, "NTP") != NULL ||
+                          strstr(token, "SNMP") != NULL ||
+                          strstr(token, "SSDP") != NULL) {
                     flow->label = 1;  // Attack
                 } else {
                     flow->label = 0;  // Default to benign for unknown labels
@@ -434,10 +454,26 @@ void ip_uint32_to_string(uint32_t ip, char *ip_str) {
 }
 
 uint64_t parse_timestamp(const char *timestamp_str) {
-    // CIC-DDoS2019 uses format: DD/MM/YYYY HH:MM:SS.microseconds
+    // CIC-DDoS2019 uses format: YYYY-MM-DD HH:MM:SS.microseconds or DD/MM/YYYY HH:MM:SS.microseconds
     struct tm tm;
-    uint64_t microseconds;
+    uint64_t microseconds = 0;
+    memset(&tm, 0, sizeof(struct tm));
     
+    // Try ISO format first: YYYY-MM-DD HH:MM:SS.microseconds
+    if (sscanf(timestamp_str, "%d-%d-%d %d:%d:%d.%llu", 
+               &tm.tm_year, &tm.tm_mon, &tm.tm_mday,
+               &tm.tm_hour, &tm.tm_min, &tm.tm_sec, &microseconds) == 7) {
+        tm.tm_year -= 1900; // Adjust year
+        tm.tm_mon -= 1;     // Adjust month (0-based)
+        
+        time_t time_val = mktime(&tm);
+        if (time_val != -1) {
+            return (uint64_t)time_val * 1000000ULL + microseconds;
+        }
+    }
+    
+    // Try alternative format: DD/MM/YYYY HH:MM:SS.microseconds
+    memset(&tm, 0, sizeof(struct tm));
     if (sscanf(timestamp_str, "%d/%d/%d %d:%d:%d.%llu", 
                &tm.tm_mday, &tm.tm_mon, &tm.tm_year,
                &tm.tm_hour, &tm.tm_min, &tm.tm_sec, &microseconds) == 7) {
@@ -445,7 +481,9 @@ uint64_t parse_timestamp(const char *timestamp_str) {
         tm.tm_mon -= 1;     // Adjust month (0-based)
         
         time_t time_val = mktime(&tm);
-        return (uint64_t)time_val * 1000000 + microseconds;
+        if (time_val != -1) {
+            return (uint64_t)time_val * 1000000ULL + microseconds;
+        }
     }
     
     return 0;

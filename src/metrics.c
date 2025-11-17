@@ -36,10 +36,28 @@ void metrics_start_algorithm(algorithm_metrics_t *metrics, const char *algorithm
 void metrics_end_algorithm(algorithm_metrics_t *metrics) {
     metrics->end_time = metrics_get_current_time_us();
     
+    // Calculate experiment duration (wall-clock time)
+    uint64_t experiment_duration_us = (metrics->end_time > metrics->start_time) ? 
+                                      (metrics->end_time - metrics->start_time) : 0;
+    
+    // Calculate detection lead time (time from first attack to first detection)
+    if (metrics->first_attack_time > 0 && metrics->first_detection_time > 0) {
+        // Convert first_attack_time (flow timestamp) to microseconds relative to experiment start
+        // For simplicity, use first_detection_time - first_attack_time if both are in same timebase
+        // Otherwise, use first_detection_time - start_time as approximation
+        if (metrics->first_detection_time > metrics->start_time) {
+            metrics->performance.detection_latency_us = metrics->first_detection_time - metrics->start_time;
+        } else {
+            metrics->performance.detection_latency_us = 0;
+        }
+    } else {
+        metrics->performance.detection_latency_us = 0;
+    }
+    
     // Calculate all metrics
     metrics_calculate_detection_metrics(&metrics->detection);
-    metrics_calculate_performance_metrics(&metrics->performance);
-    metrics_calculate_gpu_metrics(&metrics->gpu);
+    metrics_calculate_performance_metrics(&metrics->performance, experiment_duration_us);
+    metrics_calculate_gpu_metrics(&metrics->gpu, experiment_duration_us);
     metrics_calculate_blocking_metrics(&metrics->blocking);
 }
 
@@ -138,42 +156,58 @@ void metrics_calculate_detection_metrics(detection_metrics_t *metrics) {
     }
 }
 
-void metrics_calculate_performance_metrics(performance_metrics_t *metrics) {
-    if (metrics->total_processing_time_us > 0) {
-        // Calculate throughput with minimum time threshold for realistic values
-        double time_sec = metrics->total_processing_time_us / 1000000.0;
+void metrics_calculate_performance_metrics(performance_metrics_t *metrics, uint64_t experiment_duration_us) {
+    if (experiment_duration_us > 0) {
+        // Use actual experiment wall-clock time for realistic throughput
+        double time_sec = experiment_duration_us / 1000000.0;
         
-        // Set minimum time to 1ms to avoid unrealistic throughput calculations
-        if (time_sec < 0.001) {
-            time_sec = 0.001; // 1ms minimum
-        }
-        
-        if (time_sec > 0) {
+        // Handle small datasets - mark as N/A if duration too small
+        if (time_sec < 0.01) {  // Less than 10ms
+            metrics->packets_per_second = 0.0;  // Will display as N/A
+            metrics->gbps_throughput = 0.0;
+            metrics->bytes_per_second = 0.0;
+            metrics->flows_per_second = 0.0;
+        } else {
             metrics->packets_per_second = metrics->total_packets_processed / time_sec;
             metrics->bytes_per_second = metrics->total_bytes_processed / time_sec;
             metrics->flows_per_second = metrics->total_flows_processed / time_sec;
-            metrics->gbps_throughput = (metrics->bytes_per_second * 8) / (1024 * 1024 * 1024);
+            metrics->gbps_throughput = (metrics->bytes_per_second * 8) / (1024.0 * 1024.0 * 1024.0);
         }
         
-        // Calculate average processing time
-        if (metrics->total_packets_processed > 0) {
+        // Average processing time per packet (using total processing time, not experiment duration)
+        if (metrics->total_packets_processed > 0 && metrics->total_processing_time_us > 0) {
             metrics->avg_processing_time_us = metrics->total_processing_time_us / 
                                             metrics->total_packets_processed;
         }
     }
 }
 
-void metrics_calculate_gpu_metrics(gpu_metrics_t *metrics) {
-    if (metrics->total_gpu_time_us > 0) {
-        // Calculate GPU utilization (simplified)
-        metrics->gpu_utilization_percent = (double)metrics->kernel_execution_time_us / 
-                                          metrics->total_gpu_time_us * 100.0;
+void metrics_calculate_gpu_metrics(gpu_metrics_t *metrics, uint64_t total_experiment_time_us) {
+    if (total_experiment_time_us > 0 && metrics->kernel_execution_time_us > 0) {
+        // Calculate GPU utilization as: (GPU kernel time / total experiment time) * 100
+        metrics->gpu_utilization_percent = 
+            ((double)metrics->kernel_execution_time_us / total_experiment_time_us) * 100.0;
         
-        // Calculate memory utilization (simplified)
-        if (metrics->bytes_transferred > 0) {
-            metrics->memory_utilization_percent = (double)metrics->memory_transfer_time_us / 
-                                                 metrics->total_gpu_time_us * 100.0;
+        // Cap at 100%
+        if (metrics->gpu_utilization_percent > 100.0) {
+            metrics->gpu_utilization_percent = 100.0;
         }
+        
+        // Calculate memory utilization (as percentage of experiment time)
+        if (metrics->bytes_transferred > 0 && metrics->memory_transfer_time_us > 0) {
+            metrics->memory_utilization_percent = 
+                ((double)metrics->memory_transfer_time_us / total_experiment_time_us) * 100.0;
+            
+            // Cap at 100%
+            if (metrics->memory_utilization_percent > 100.0) {
+                metrics->memory_utilization_percent = 100.0;
+            }
+        } else {
+            metrics->memory_utilization_percent = 0.0;
+        }
+    } else {
+        metrics->gpu_utilization_percent = 0.0;
+        metrics->memory_utilization_percent = 0.0;
     }
 }
 
@@ -212,6 +246,13 @@ int metrics_export_csv(system_metrics_t *metrics, const char *filename) {
     
     // Write header
     fprintf(file, "Algorithm,Precision,Recall,F1-Score,Accuracy,FPR,Packets/sec,Gbps,GPU_Util%%,Attack_Block%%,Collateral_Damage%%\n");
+    
+    // Write dataset (ground-truth) traffic metrics row
+    fprintf(file, "Dataset,%.4f,%.4f,%.4f,%.4f,%.4f,%.2f,%.4f,%.2f,%.2f,%.2f\n",
+            0.0, 0.0, 0.0, 0.0, 0.0,
+            metrics->dataset.dataset_packets_per_second,
+            metrics->dataset.dataset_gbps,
+            0.0, 0.0, 0.0);
     
     // Write entropy metrics
     fprintf(file, "Entropy,%.4f,%.4f,%.4f,%.4f,%.4f,%.2f,%.4f,%.2f,%.2f,%.2f\n",
@@ -283,6 +324,15 @@ int metrics_export_json(system_metrics_t *metrics, const char *filename) {
     fprintf(file, "    \"config\": \"%s\",\n", metrics->experiment_config);
     fprintf(file, "    \"duration_us\": %llu,\n", 
             metrics->experiment_end_time - metrics->experiment_start_time);
+    fprintf(file, "  },\n");
+    
+    // Dataset metrics
+    fprintf(file, "  \"dataset_metrics\": {\n");
+    fprintf(file, "    \"duration_us\": %llu,\n", metrics->dataset.dataset_duration_us);
+    fprintf(file, "    \"total_packets\": %llu,\n", metrics->dataset.dataset_total_packets);
+    fprintf(file, "    \"total_bytes\": %llu,\n", metrics->dataset.dataset_total_bytes);
+    fprintf(file, "    \"packets_per_second\": %.2f,\n", metrics->dataset.dataset_packets_per_second);
+    fprintf(file, "    \"gbps\": %.4f\n", metrics->dataset.dataset_gbps);
     fprintf(file, "  },\n");
     
     // Write algorithm metrics
@@ -369,8 +419,12 @@ void metrics_calculate_combined_metrics(system_metrics_t *metrics) {
         metrics->cusum_metrics.performance.total_processing_time_us +
         metrics->svm_metrics.performance.total_processing_time_us;
     
-    // Calculate combined performance metrics
-    metrics_calculate_performance_metrics(&metrics->combined_metrics.performance);
+    // Calculate combined experiment duration (reuse for both performance and GPU metrics)
+    uint64_t combined_duration_us = (metrics->experiment_end_time > metrics->experiment_start_time) ?
+                                     (metrics->experiment_end_time - metrics->experiment_start_time) : 0;
+    
+    // Calculate combined performance metrics using experiment duration
+    metrics_calculate_performance_metrics(&metrics->combined_metrics.performance, combined_duration_us);
     
     // Aggregate GPU metrics
     metrics->combined_metrics.gpu.kernel_execution_time_us = 
@@ -388,8 +442,8 @@ void metrics_calculate_combined_metrics(system_metrics_t *metrics) {
         metrics->cusum_metrics.gpu.total_gpu_time_us +
         metrics->svm_metrics.gpu.total_gpu_time_us;
     
-    // Calculate combined GPU metrics
-    metrics_calculate_gpu_metrics(&metrics->combined_metrics.gpu);
+    // Calculate combined GPU metrics using experiment duration
+    metrics_calculate_gpu_metrics(&metrics->combined_metrics.gpu, combined_duration_us);
     
     // Aggregate blocking metrics
     metrics->combined_metrics.blocking.total_attack_packets = 
@@ -423,39 +477,87 @@ void metrics_print_summary(system_metrics_t *metrics) {
     printf("Experiment Duration: %.2f seconds\n", 
            (metrics->experiment_end_time - metrics->experiment_start_time) / 1000000.0);
     
+    // Dataset traffic (ground-truth) rate derived from CSV timestamps
+    if (metrics->dataset.dataset_packets_per_second > 0.0) {
+        printf("Dataset Traffic Rate: %.2f packets/sec (%.4f Gbps)\n",
+               metrics->dataset.dataset_packets_per_second,
+               metrics->dataset.dataset_gbps);
+    } else {
+        printf("Dataset Traffic Rate: N/A\n");
+    }
+    
     printf("\n--- Entropy Detection ---\n");
-    printf("Precision: %.4f, Recall: %.4f, F1: %.4f, Accuracy: %.4f\n",
+    printf("Precision: %.4f, Recall: %.4f, F1: %.4f, Accuracy: %.4f, FPR: %.4f\n",
            metrics->entropy_metrics.detection.precision,
            metrics->entropy_metrics.detection.recall,
            metrics->entropy_metrics.detection.f1_score,
-           metrics->entropy_metrics.detection.accuracy);
-    printf("Throughput: %.2f packets/sec (%.4f Gbps)\n",
-           metrics->entropy_metrics.performance.packets_per_second,
-           metrics->entropy_metrics.performance.gbps_throughput);
+           metrics->entropy_metrics.detection.accuracy,
+           metrics->entropy_metrics.detection.false_positive_rate);
+    if (metrics->entropy_metrics.performance.detection_latency_us > 0) {
+        printf("Detection Lead Time: %.2f ms\n", 
+               metrics->entropy_metrics.performance.detection_latency_us / 1000.0);
+    }
+    if (metrics->entropy_metrics.performance.packets_per_second == 0.0) {
+        printf("Processing Throughput: N/A (dataset too small for accurate measurement)\n");
+    } else {
+        printf("Processing Throughput: %.2f packets/sec (%.4f Gbps)\n",
+               metrics->entropy_metrics.performance.packets_per_second,
+               metrics->entropy_metrics.performance.gbps_throughput);
+    }
+    if (metrics->entropy_metrics.performance.p95_processing_time_us > 0) {
+        printf("95th Percentile Latency: %.2f us\n", 
+               (double)metrics->entropy_metrics.performance.p95_processing_time_us);
+    }
     printf("GPU Utilization: %.2f%%\n", metrics->entropy_metrics.gpu.gpu_utilization_percent);
     printf("Attack Blocking: %.2f%%, Collateral Damage: %.2f%%\n",
            metrics->entropy_metrics.blocking.attack_blocking_rate,
            metrics->entropy_metrics.blocking.collateral_damage_rate);
     
     printf("\n--- CUSUM Detection ---\n");
-    printf("Precision: %.4f, Recall: %.4f, F1: %.4f, Accuracy: %.4f\n",
+    printf("Precision: %.4f, Recall: %.4f, F1: %.4f, Accuracy: %.4f, FPR: %.4f\n",
            metrics->cusum_metrics.detection.precision,
            metrics->cusum_metrics.detection.recall,
            metrics->cusum_metrics.detection.f1_score,
-           metrics->cusum_metrics.detection.accuracy);
-    printf("Throughput: %.2f packets/sec (%.4f Gbps)\n",
-           metrics->cusum_metrics.performance.packets_per_second,
-           metrics->cusum_metrics.performance.gbps_throughput);
+           metrics->cusum_metrics.detection.accuracy,
+           metrics->cusum_metrics.detection.false_positive_rate);
+    if (metrics->cusum_metrics.performance.detection_latency_us > 0) {
+        printf("Detection Lead Time: %.2f ms\n", 
+               metrics->cusum_metrics.performance.detection_latency_us / 1000.0);
+    }
+    if (metrics->cusum_metrics.performance.packets_per_second == 0.0) {
+        printf("Processing Throughput: N/A (dataset too small for accurate measurement)\n");
+    } else {
+        printf("Processing Throughput: %.2f packets/sec (%.4f Gbps)\n",
+               metrics->cusum_metrics.performance.packets_per_second,
+               metrics->cusum_metrics.performance.gbps_throughput);
+    }
+    if (metrics->cusum_metrics.performance.p95_processing_time_us > 0) {
+        printf("95th Percentile Latency: %.2f us\n", 
+               (double)metrics->cusum_metrics.performance.p95_processing_time_us);
+    }
     
     printf("\n--- SVM Detection ---\n");
-    printf("Precision: %.4f, Recall: %.4f, F1: %.4f, Accuracy: %.4f\n",
+    printf("Precision: %.4f, Recall: %.4f, F1: %.4f, Accuracy: %.4f, FPR: %.4f\n",
            metrics->svm_metrics.detection.precision,
            metrics->svm_metrics.detection.recall,
            metrics->svm_metrics.detection.f1_score,
-           metrics->svm_metrics.detection.accuracy);
-    printf("Throughput: %.2f packets/sec (%.4f Gbps)\n",
-           metrics->svm_metrics.performance.packets_per_second,
-           metrics->svm_metrics.performance.gbps_throughput);
+           metrics->svm_metrics.detection.accuracy,
+           metrics->svm_metrics.detection.false_positive_rate);
+    if (metrics->svm_metrics.performance.detection_latency_us > 0) {
+        printf("Detection Lead Time: %.2f ms\n", 
+               metrics->svm_metrics.performance.detection_latency_us / 1000.0);
+    }
+    if (metrics->svm_metrics.performance.packets_per_second == 0.0) {
+        printf("Processing Throughput: N/A (dataset too small for accurate measurement)\n");
+    } else {
+        printf("Processing Throughput: %.2f packets/sec (%.4f Gbps)\n",
+               metrics->svm_metrics.performance.packets_per_second,
+               metrics->svm_metrics.performance.gbps_throughput);
+    }
+    if (metrics->svm_metrics.performance.p95_processing_time_us > 0) {
+        printf("95th Percentile Latency: %.2f us\n", 
+               (double)metrics->svm_metrics.performance.p95_processing_time_us);
+    }
     printf("GPU Utilization: %.2f%%\n", metrics->svm_metrics.gpu.gpu_utilization_percent);
     
     printf("\n--- Combined Detection ---\n");
@@ -464,9 +566,13 @@ void metrics_print_summary(system_metrics_t *metrics) {
            metrics->combined_metrics.detection.recall,
            metrics->combined_metrics.detection.f1_score,
            metrics->combined_metrics.detection.accuracy);
-    printf("Throughput: %.2f packets/sec (%.4f Gbps)\n",
-           metrics->combined_metrics.performance.packets_per_second,
-           metrics->combined_metrics.performance.gbps_throughput);
+    if (metrics->combined_metrics.performance.packets_per_second == 0.0) {
+        printf("Processing Throughput: N/A (dataset too small for accurate measurement)\n");
+    } else {
+        printf("Processing Throughput: %.2f packets/sec (%.4f Gbps)\n",
+               metrics->combined_metrics.performance.packets_per_second,
+               metrics->combined_metrics.performance.gbps_throughput);
+    }
     printf("Attack Blocking: %.2f%%, Collateral Damage: %.2f%%\n",
            metrics->combined_metrics.blocking.attack_blocking_rate,
            metrics->combined_metrics.blocking.collateral_damage_rate);

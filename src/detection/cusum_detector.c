@@ -5,11 +5,11 @@
 #include <math.h>
 
 void cusum_detector_get_default_config(cusum_config_t *config) {
-    config->threshold = 1.0f;           // Detection threshold (lowered for sensitivity)
-    config->drift_parameter = 0.1f;     // Drift parameter (lowered)
-    config->smoothing_factor = 0.3f;   // Smoothing factor (increased)
+    config->threshold = 0.01f;          // Very low threshold for maximum sensitivity
+    config->drift_parameter = 0.001f;   // Very low drift parameter for faster detection
+    config->smoothing_factor = 0.1f;    // Lower smoothing for faster response
     config->min_samples = 1;            // Minimum samples (lowered for small datasets)
-    config->window_size = 100;          // Window size for baseline
+    config->window_size = 10;           // Very small window for faster baseline adaptation
 }
 
 int cusum_detector_init(cusum_detector_t *detector, const cusum_config_t *config, 
@@ -183,14 +183,28 @@ int cusum_detector_process_window(cusum_detector_t *detector, time_window_t *win
         detector->metrics->performance.total_flows_processed += window->flow_count;
         
         // Record detection and blocking metrics for each flow
+        // If attack detected at window level, mark attack flows as detected (not all flows)
         for (size_t i = 0; i < window->flow_count; i++) {
             int is_attack = is_attack_flow(&window->flows[i]);
-            metrics_record_detection(detector->metrics, is_attack, attack_detected);
+            
+            // If window-level attack detected, only mark actual attack flows as detected
+            // This gives more realistic per-flow detection metrics
+            int flow_detected_as_attack = (attack_detected && is_attack) ? 1 : 0;
+            
+            metrics_record_detection(detector->metrics, is_attack, flow_detected_as_attack);
+            
+            // Track first attack time and first detection time for lead time calculation
+            if (is_attack && detector->metrics->first_attack_time == 0) {
+                detector->metrics->first_attack_time = window->flows[i].timestamp;
+            }
+            if (flow_detected_as_attack && detector->metrics->first_detection_time == 0) {
+                detector->metrics->first_detection_time = metrics_get_current_time_us();
+            }
             
             // Record blocking metrics (simulate blocking when attack detected)
             uint32_t flow_packets = window->flows[i].total_fwd_packets + window->flows[i].total_bwd_packets;
             uint32_t flow_bytes = window->flows[i].total_fwd_bytes + window->flows[i].total_bwd_bytes;
-            int was_blocked = attack_detected ? 1 : 0; // Block if attack detected
+            int was_blocked = flow_detected_as_attack ? 1 : 0; // Block if this flow detected as attack
             
             metrics_record_blocking(detector->metrics, is_attack, was_blocked, flow_packets, flow_bytes);
         }

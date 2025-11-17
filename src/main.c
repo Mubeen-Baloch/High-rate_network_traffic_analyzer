@@ -352,6 +352,37 @@ int system_load_dataset(ddos_system_t *system) {
     printf("  Duration: %.2f seconds\n", 
            (system->flows.end_time - system->flows.start_time) / 1000000.0);
     
+    // Compute dataset (ground-truth) traffic metrics from the CSV time span
+    {
+        uint64_t duration_us = 0;
+        if (system->flows.end_time > system->flows.start_time) {
+            duration_us = system->flows.end_time - system->flows.start_time;
+        }
+        
+        uint64_t total_packets = 0;
+        uint64_t total_bytes = 0;
+        for (size_t i = 0; i < system->flows.count; i++) {
+            total_packets += (uint64_t)system->flows.flows[i].total_fwd_packets +
+                             (uint64_t)system->flows.flows[i].total_bwd_packets;
+            total_bytes += (uint64_t)system->flows.flows[i].total_fwd_bytes +
+                           (uint64_t)system->flows.flows[i].total_bwd_bytes;
+        }
+        
+        system->metrics.dataset.dataset_duration_us = duration_us;
+        system->metrics.dataset.dataset_total_packets = total_packets;
+        system->metrics.dataset.dataset_total_bytes = total_bytes;
+        
+        if (duration_us > 0) {
+            double time_sec = duration_us / 1000000.0;
+            system->metrics.dataset.dataset_packets_per_second = total_packets / time_sec;
+            double bytes_per_second = total_bytes / time_sec;
+            system->metrics.dataset.dataset_gbps = (bytes_per_second * 8.0) / (1024.0 * 1024.0 * 1024.0);
+        } else {
+            system->metrics.dataset.dataset_packets_per_second = 0.0;
+            system->metrics.dataset.dataset_gbps = 0.0;
+        }
+    }
+    
     return 0;
 }
 
@@ -435,6 +466,12 @@ int system_run_blocking(ddos_system_t *system) {
 
 void system_print_results(ddos_system_t *system) {
     printf("\n=== Experiment Results ===\n");
+    
+    // Try hardware GPU utilization (optional)
+    float hw_util = 0.0f;
+    if (opencl_query_gpu_utilization(&system->opencl_ctx, &hw_util) == 0) {
+        printf("GPU Hardware Utilization (NVML): %.2f%%\n", hw_util);
+    }
     
     // Calculate combined metrics from all algorithms
     metrics_calculate_combined_metrics(&system->metrics);

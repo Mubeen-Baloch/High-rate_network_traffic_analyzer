@@ -5,10 +5,10 @@
 #include <math.h>
 
 void entropy_detector_get_default_config(entropy_config_t *config) {
-    config->sensitivity = 0.3f;           // Moderate sensitivity
+    config->sensitivity = 0.5f;           // Higher sensitivity for better detection
     config->window_size_ms = 1000;        // 1 second windows
-    config->min_packets = 100;             // Minimum packets for analysis
-    config->entropy_threshold = 3.0f;      // Static threshold
+    config->min_packets = 10;             // Lower minimum packets for analysis
+    config->entropy_threshold = 4.0f;      // Static threshold (higher = more sensitive to low entropy)
     config->use_dynamic_threshold = 1;     // Use dynamic threshold
 }
 
@@ -423,11 +423,12 @@ float entropy_detector_calculate_threshold(entropy_detector_t *detector,
     float std_dev = sqrtf(variance / (float)count);
     
     // Dynamic threshold based on sensitivity
+    // Lower threshold = more sensitive to low entropy (DDoS attacks)
     float threshold = mean - (detector->config.sensitivity * std_dev);
     
-    // Ensure threshold is reasonable
-    if (threshold < 0.0f) threshold = 0.0f;
-    if (threshold > 10.0f) threshold = 10.0f;
+    // Ensure threshold is reasonable but allow lower values for better detection
+    if (threshold < 0.5f) threshold = 0.5f;  // Minimum threshold
+    if (threshold > 8.0f) threshold = 8.0f;  // Maximum threshold
     
     return threshold;
 }
@@ -450,20 +451,40 @@ int entropy_detector_analyze_results(entropy_detector_t *detector,
     
     // Update metrics - record detection results for each flow
     if (detector->metrics) {
-        // Determine if window contains attacks (any IP flagged as attack)
-        int window_has_attack = (attack_detections > 0) ? 1 : 0;
-        
-        // For each flow, record the detection result and blocking metrics
+        // For each flow, check if THIS specific flow's IP was flagged as attack
         for (size_t i = 0; i < window->flow_count; i++) {
             int is_attack = is_attack_flow(&window->flows[i]);
-            int detected_as_attack = window_has_attack;  // If any IP flagged, all flows in window flagged
             
-            metrics_record_detection(detector->metrics, is_attack, detected_as_attack);
+            // Check if THIS specific flow's IP was flagged
+            int flow_detected_as_attack = 0;
+            uint32_t src_ip = window->flows[i].src_ip;
+            uint32_t dst_ip = window->flows[i].dst_ip;
             
-            // Record blocking metrics (simulate blocking when attack detected)
+            // Check if src or dst IP is in the detected IPs list
+            for (size_t j = 0; j < detector->ip_stats_count; j++) {
+                if (detection_results[j] == 1) {
+                    if (detector->ip_stats[j].ip == src_ip || 
+                        detector->ip_stats[j].ip == dst_ip) {
+                        flow_detected_as_attack = 1;
+                        break;
+                    }
+                }
+            }
+            
+            metrics_record_detection(detector->metrics, is_attack, flow_detected_as_attack);
+            
+            // Track first attack time and first detection time for lead time calculation
+            if (is_attack && detector->metrics->first_attack_time == 0) {
+                detector->metrics->first_attack_time = window->flows[i].timestamp;
+            }
+            if (flow_detected_as_attack && detector->metrics->first_detection_time == 0) {
+                detector->metrics->first_detection_time = metrics_get_current_time_us();
+            }
+            
+            // Selective blocking: only block if this specific flow was detected as attack
             uint32_t flow_packets = window->flows[i].total_fwd_packets + window->flows[i].total_bwd_packets;
             uint32_t flow_bytes = window->flows[i].total_fwd_bytes + window->flows[i].total_bwd_bytes;
-            int was_blocked = (detected_as_attack && window_has_attack) ? 1 : 0; // Block if detected as attack
+            int was_blocked = flow_detected_as_attack ? 1 : 0;
             
             metrics_record_blocking(detector->metrics, is_attack, was_blocked, flow_packets, flow_bytes);
         }

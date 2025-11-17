@@ -79,6 +79,8 @@ typedef struct {
     
     uint64_t start_time;
     uint64_t end_time;
+    uint64_t first_attack_time;      // Timestamp of first attack flow in dataset
+    uint64_t first_detection_time;   // Timestamp when first attack was detected
     uint32_t alerts_generated;
     uint32_t false_alarms;
 } algorithm_metrics_t;
@@ -89,6 +91,15 @@ typedef struct {
     algorithm_metrics_t cusum_metrics;
     algorithm_metrics_t svm_metrics;
     algorithm_metrics_t combined_metrics;
+    
+    // Dataset (ground-truth) traffic metrics
+    struct {
+        uint64_t dataset_duration_us;
+        uint64_t dataset_total_packets;
+        uint64_t dataset_total_bytes;
+        double dataset_packets_per_second;
+        double dataset_gbps;
+    } dataset;
     
     uint64_t experiment_start_time;
     uint64_t experiment_end_time;
@@ -116,8 +127,8 @@ void metrics_record_blocking(algorithm_metrics_t *metrics, int is_attack,
 
 // Calculation functions
 void metrics_calculate_detection_metrics(detection_metrics_t *metrics);
-void metrics_calculate_performance_metrics(performance_metrics_t *metrics);
-void metrics_calculate_gpu_metrics(gpu_metrics_t *metrics);
+void metrics_calculate_performance_metrics(performance_metrics_t *metrics, uint64_t experiment_duration_us);
+void metrics_calculate_gpu_metrics(gpu_metrics_t *metrics, uint64_t total_experiment_time_us);
 void metrics_calculate_blocking_metrics(blocking_metrics_t *metrics);
 void metrics_calculate_combined_metrics(system_metrics_t *metrics);
 

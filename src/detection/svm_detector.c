@@ -1,4 +1,5 @@
 #include "svm_detector.h"
+#include "metrics.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -196,6 +197,16 @@ int svm_detector_process_window(svm_detector_t *detector, time_window_t *window)
     size_t total_processed = 0;
     size_t total_attacks_detected = 0;
     
+    // Accumulate per-flow predictions across all batches
+    int *predictions_all = NULL;
+    if (window->flow_count > 0) {
+        predictions_all = (int*)calloc(window->flow_count, sizeof(int));
+        if (!predictions_all) {
+            fprintf(stderr, "Failed to allocate predictions buffer\n");
+            return -1;
+        }
+    }
+    
     for (size_t batch_start = 0; batch_start < window->flow_count; batch_start += batch_size) {
         size_t current_batch_size = (batch_start + batch_size > window->flow_count) ? 
                                    (window->flow_count - batch_start) : batch_size;
@@ -218,9 +229,11 @@ int svm_detector_process_window(svm_detector_t *detector, time_window_t *window)
             continue;
         }
         
-        // Count attacks in current batch
+        // Count attacks in current batch and copy predictions into per-flow array
         for (size_t i = 0; i < current_batch_size; i++) {
-            if (detector->predictions[i] > 0) {
+            int is_attack_pred = (detector->predictions[i] > 0) ? 1 : 0;
+            predictions_all[batch_start + i] = is_attack_pred;
+            if (is_attack_pred) {
                 total_attacks_detected++;
             }
         }
@@ -254,22 +267,20 @@ int svm_detector_process_window(svm_detector_t *detector, time_window_t *window)
         detector->metrics->performance.total_flows_processed += window->flow_count;
         
         // Record detection and blocking metrics for each flow
-        int attack_detected = (total_attacks_detected > 0) ? 1 : 0;
         for (size_t i = 0; i < window->flow_count; i++) {
             int is_attack = is_attack_flow(&window->flows[i]);
-            
-            // For SVM, we need to check the actual prediction for each flow
-            int predicted_as_attack = 0;
-            if (i < total_processed) {
-                // Find which batch this flow belongs to
-                size_t batch_idx = i / batch_size;
-                size_t flow_in_batch = i % batch_size;
-                if (batch_idx < (total_processed / batch_size) && flow_in_batch < batch_size) {
-                    predicted_as_attack = (detector->predictions[flow_in_batch] > 0) ? 1 : 0;
-                }
-            }
+            // Use accumulated per-flow prediction
+            int predicted_as_attack = (i < total_processed) ? predictions_all[i] : 0;
             
             metrics_record_detection(detector->metrics, is_attack, predicted_as_attack);
+            
+            // Track first attack time and first detection time for lead time calculation
+            if (is_attack && detector->metrics->first_attack_time == 0) {
+                detector->metrics->first_attack_time = window->flows[i].timestamp;
+            }
+            if (predicted_as_attack && detector->metrics->first_detection_time == 0) {
+                detector->metrics->first_detection_time = metrics_get_current_time_us();
+            }
             
             // Record blocking metrics (simulate blocking when attack detected)
             uint32_t flow_packets = window->flows[i].total_fwd_packets + window->flows[i].total_bwd_packets;
@@ -278,6 +289,10 @@ int svm_detector_process_window(svm_detector_t *detector, time_window_t *window)
             
             metrics_record_blocking(detector->metrics, is_attack, was_blocked, flow_packets, flow_bytes);
         }
+    }
+    
+    if (predictions_all) {
+        free(predictions_all);
     }
     
     return 0;
@@ -519,6 +534,8 @@ int svm_detector_inference_cpu(svm_detector_t *detector, float *features, uint32
 int svm_detector_inference_gpu(svm_detector_t *detector, float *features, uint32_t num_samples) {
     if (!detector->opencl_ctx) return -1;
     
+    uint64_t gpu_start_us = metrics_get_current_time_us();
+    
     // Copy features to GPU
     if (opencl_write_buffer(detector->opencl_ctx, &detector->feature_buffer, 
                            features, num_samples * detector->num_features * sizeof(float)) != 0) {
@@ -542,6 +559,12 @@ int svm_detector_inference_gpu(svm_detector_t *detector, float *features, uint32
     if (opencl_read_buffer(detector->opencl_ctx, &detector->prediction_buffer, 
                           detector->predictions, num_samples * sizeof(float)) != 0) {
         return -1;
+    }
+    
+    uint64_t gpu_end_us = metrics_get_current_time_us();
+    if (detector->metrics) {
+        uint64_t gpu_time_us = (gpu_end_us > gpu_start_us) ? (gpu_end_us - gpu_start_us) : 0;
+        metrics_record_gpu_time(detector->metrics, gpu_time_us, 0);
     }
     
     return 0;

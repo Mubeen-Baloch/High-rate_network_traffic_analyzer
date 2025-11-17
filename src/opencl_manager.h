@@ -55,11 +55,15 @@ int opencl_execute_svm_kernel(opencl_context_t *ctx,
                              opencl_buffer_t *svm_support_vectors,
                              opencl_buffer_t *svm_bias,
                              opencl_buffer_t *predictions,
-                             size_t num_samples, size_t num_features, 
-                             size_t num_support_vectors, float gamma);
+                             unsigned int num_samples, unsigned int num_features, 
+                             unsigned int num_support_vectors, float gamma);
 
 // Utility functions
 const char* opencl_get_error_string(cl_int error);
 void opencl_print_device_info(cl_device_id device);
+
+// Optional: Query hardware GPU utilization via NVML if available (guarded by USE_NVML)
+// Returns 0 on success and writes utilization_percent (0-100), otherwise returns -1
+int opencl_query_gpu_utilization(opencl_context_t *ctx, float *utilization_percent);
 
 #endif // OPENCL_MANAGER_H
