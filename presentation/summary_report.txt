@@ -1,0 +1,102 @@
+
+================================================================================
+HIGH-RATE NETWORK TRAFFIC ANALYZER FOR EARLY DDOS DETECTION AND MITIGATION
+Performance Summary Report
+================================================================================
+
+Generated: 2025-11-18 23:01:09
+
+EXECUTIVE SUMMARY
+--------------------------------------------------------------------------------
+This report presents comprehensive performance analysis of a GPU-accelerated DDoS 
+detection system implementing three detection algorithms (Entropy, CUSUM, SVM) 
+with blocking mechanisms (RTBH, ACL).
+
+SYSTEM CONFIGURATION
+--------------------------------------------------------------------------------
+Platform: GPU-Accelerated (NVIDIA RTX 3050)
+Framework: OpenCL 3.0
+Dataset: CIC-DDoS2019
+Algorithms Tested: Entropy, CUSUM, SVM, Combined
+
+DETECTION ACCURACY RESULTS
+--------------------------------------------------------------------------------
+
+Entropy Detection Algorithm:
+  Precision:        0.9996
+  Recall:           0.9966
+  F1-Score:         0.9981
+  Accuracy:         0.9962
+  False Positive Rate: 0.5370
+
+CUSUM Detection Algorithm:
+  Precision:        1.0000
+  Recall:           1.0000
+  F1-Score:         1.0000
+  Accuracy:         1.0000
+  False Positive Rate: 0.0000
+
+SVM Detection Algorithm:
+  Precision:        0.9994
+  Recall:           1.0000
+  F1-Score:         0.9997
+  Accuracy:         0.9994
+  False Positive Rate: 0.8536
+
+Combined Detection Algorithm:
+  Precision:        0.9997
+  Recall:           0.9988
+  F1-Score:         0.9993
+  Accuracy:         0.9985
+  False Positive Rate: 0.4635
+
+PERFORMANCE METRICS
+--------------------------------------------------------------------------------
+
+Entropy:
+  Throughput:       12.44 Million packets/sec
+  Network Throughput: 45.53 Gbps
+  GPU Utilization: 46.88%
+
+CUSUM:
+  Throughput:       41.53 Million packets/sec
+  Network Throughput: 152.07 Gbps
+  GPU Utilization: 0.00%
+
+SVM:
+  Throughput:       14.92 Million packets/sec
+  Network Throughput: 54.61 Gbps
+  GPU Utilization: 57.80%
+
+Combined:
+  Throughput:       1.36 Million packets/sec
+  Network Throughput: 4.99 Gbps
+  GPU Utilization: 3.47%
+
+BLOCKING EFFECTIVENESS
+--------------------------------------------------------------------------------
+
+Entropy:
+  Attack Traffic Blocked: 99.43%
+  Collateral Damage:      23.28%
+
+CUSUM:
+  Attack Traffic Blocked: 99.97%
+  Collateral Damage:      0.00%
+
+SVM:
+  Attack Traffic Blocked: 100.00%
+  Collateral Damage:      95.99%
+
+Combined:
+  Attack Traffic Blocked: 99.80%
+  Collateral Damage:      39.76%
+
+KEY FINDINGS
+--------------------------------------------------------------------------------
+• Best F1-Score: CUSUM (1.0000)
+• Highest Throughput: CUSUM (41.53M pps)
+• GPU acceleration provides significant performance improvements
+• Multiple detection algorithms enable comprehensive protection
+
+================================================================================

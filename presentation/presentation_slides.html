@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DDoS Detection System - Presentation</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .slide { 
+            width: 100vw; 
+            height: 100vh; 
+            display: none; 
+            padding: 60px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            overflow-y: auto;
+        }
+        .slide.active { display: block; }
+        .slide h1 { font-size: 3em; margin-bottom: 30px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        .slide h2 { font-size: 2.5em; margin-bottom: 20px; color: #ffd700; }
+        .slide h3 { font-size: 1.8em; margin-bottom: 15px; }
+        .slide-content { background: rgba(255,255,255,0.95); color: #333; padding: 40px; border-radius: 15px; margin-top: 20px; }
+        .nav { position: fixed; bottom: 20px; right: 20px; z-index: 1000; }
+        .nav button { padding: 15px 30px; margin: 5px; font-size: 16px; cursor: pointer; border: none; border-radius: 5px; background: white; color: #667eea; }
+        .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 20px 0; }
+        .metric-box { background: #f0f0f0; padding: 20px; border-radius: 10px; text-align: center; }
+        .metric-value { font-size: 2em; font-weight: bold; color: #667eea; }
+        .metric-label { color: #666; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <!-- Slide 1: Title -->
+    <div class="slide active">
+        <h1>🚀 High-Rate Network Traffic Analyzer</h1>
+        <h2>Early DDoS Detection and Mitigation</h2>
+        <div class="slide-content">
+            <h3>GPU-Accelerated OpenCL Implementation</h3>
+            <p style="font-size: 1.3em; margin-top: 20px;">Parallel and Distributed Computing Project</p>
+            <p style="font-size: 1.1em; margin-top: 10px;">Generated: 2025-11-18</p>
+        </div>
+    </div>
+    
+    <!-- Slide 2: Overview -->
+    <div class="slide">
+        <h2>📋 Project Overview</h2>
+        <div class="slide-content">
+            <h3>Objectives</h3>
+            <ul style="font-size: 1.3em; line-height: 2;">
+                <li>Develop high-performance DDoS detection using GPU acceleration</li>
+                <li>Implement three detection algorithms (Entropy, CUSUM, SVM)</li>
+                <li>Evaluate blocking mechanisms (RTBH, ACL)</li>
+                <li>Analyze performance across multiple metrics</li>
+            </ul>
+            <h3 style="margin-top: 30px;">Key Technologies</h3>
+            <p style="font-size: 1.2em;">OpenCL 3.0 | NVIDIA RTX 3050 | CIC-DDoS2019 Dataset</p>
+        </div>
+    </div>
+    
+    <!-- Slide 3: System Architecture -->
+    <div class="slide">
+        <h2>🏗️ System Architecture</h2>
+        <div class="slide-content">
+            <div style="text-align: center; font-size: 1.2em; line-height: 2.5;">
+                <p><strong>Data Input</strong> → <strong>Detection Layer</strong> → <strong>Blocking Layer</strong></p>
+                <p style="margin-top: 30px;">↓</p>
+                <p><strong>GPU Kernels (OpenCL)</strong></p>
+                <p style="margin-top: 30px;">↓</p>
+                <p><strong>Metrics & Analysis</strong></p>
+            </div>
+            <h3 style="margin-top: 40px;">Detection Algorithms</h3>
+            <ul style="font-size: 1.2em; line-height: 2;">
+                <li><strong>Entropy-Based:</strong> GPU-accelerated Shannon entropy calculation</li>
+                <li><strong>CUSUM Statistical:</strong> CPU-based cumulative sum monitoring</li>
+                <li><strong>SVM Machine Learning:</strong> GPU-accelerated feature extraction & classification</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Slide: Entropy Performance -->
+    <div class="slide">
+        <h2>🔍 Entropy Detection Algorithm</h2>
+        <div class="slide-content">
+            <div class="metric-grid">
+                <div class="metric-box">
+                    <div class="metric-value">0.9996</div>
+                    <div class="metric-label">Precision</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value">0.9966</div>
+                    <div class="metric-label">Recall</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value">0.9981</div>
+                    <div class="metric-label">F1-Score</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value">0.9962</div>
+                    <div class="metric-label">Accuracy</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value">12.44M</div>
+                    <div class="metric-label">Packets/sec</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value">46.9%</div>
+                    <div class="metric-label">GPU Utilization</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide: CUSUM Performance -->
+    <div class="slide">
+        <h2>🔍 CUSUM Detection Algorithm</h2>
+        <div class="slide-content">
+            <div class="metric-grid">
+                <div class="metric-box">
+                    <div class="metric-value">1.0000</div>
+                    <div class="metric-label">Precision</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value">1.0000</div>
+                    <div class="metric-label">Recall</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value">1.0000</div>
+                    <div class="metric-label">F1-Score</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value">1.0000</div>
+                    <div class="metric-label">Accuracy</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value">41.53M</div>
+                    <div class="metric-label">Packets/sec</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value">0.0%</div>
+                    <div class="metric-label">GPU Utilization</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide: SVM Performance -->
+    <div class="slide">
+        <h2>🔍 SVM Detection Algorithm</h2>
+        <div class="slide-content">
+            <div class="metric-grid">
+                <div class="metric-box">
+                    <div class="metric-value">0.9994</div>
+                    <div class="metric-label">Precision</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value">1.0000</div>
+                    <div class="metric-label">Recall</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value">0.9997</div>
+                    <div class="metric-label">F1-Score</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value">0.9994</div>
+                    <div class="metric-label">Accuracy</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value">14.92M</div>
+                    <div class="metric-label">Packets/sec</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value">57.8%</div>
+                    <div class="metric-label">GPU Utilization</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide: Combined Performance -->
+    <div class="slide">
+        <h2>🔍 Combined Detection Algorithm</h2>
+        <div class="slide-content">
+            <div class="metric-grid">
+                <div class="metric-box">
+                    <div class="metric-value">0.9997</div>
+                    <div class="metric-label">Precision</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value">0.9988</div>
+                    <div class="metric-label">Recall</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value">0.9993</div>
+                    <div class="metric-label">F1-Score</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value">0.9985</div>
+                    <div class="metric-label">Accuracy</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value">1.36M</div>
+                    <div class="metric-label">Packets/sec</div>
+                </div>
+                <div class="metric-box">
+                    <div class="metric-value">3.5%</div>
+                    <div class="metric-label">GPU Utilization</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Slide: Summary -->
+    <div class="slide">
+        <h2>📊 Key Results Summary</h2>
+        <div class="slide-content">
+            <h3>Best Performance</h3>
+            <ul style="font-size: 1.3em; line-height: 2.5;">
+                <li><strong>Best F1-Score:</strong> CUSUM (1.0000)</li>
+                <li><strong>Highest Throughput:</strong> CUSUM (41.53M pps)</li>
+            </ul>
+            <h3 style="margin-top: 40px;">GPU Acceleration Impact</h3>
+            <p style="font-size: 1.2em;">Significant speedup for entropy-based detection and SVM inference</p>
+            <h3 style="margin-top: 30px;">Blocking Effectiveness</h3>
+            <p style="font-size: 1.2em;">High attack traffic blocking rates with minimal collateral damage</p>
+        </div>
+    </div>
+    
+    <!-- Slide: Conclusion -->
+    <div class="slide">
+        <h2>✅ Conclusions</h2>
+        <div class="slide-content">
+            <h3>Achievements</h3>
+            <ul style="font-size: 1.3em; line-height: 2.5;">
+                <li>✓ High-throughput processing (millions of packets/sec)</li>
+                <li>✓ GPU acceleration enables real-time analysis</li>
+                <li>✓ Multiple detection algorithms for comprehensive protection</li>
+                <li>✓ Effective blocking mechanisms with low false positives</li>
+            </ul>
+            <h3 style="margin-top: 40px;">Thank You!</h3>
+            <p style="font-size: 1.2em; margin-top: 20px;">Questions?</p>
+        </div>
+    </div>
+</body>
+<script>
+    let currentSlide = 0;
+    const slides = document.querySelectorAll('.slide');
+    
+    function showSlide(n) {
+        slides[currentSlide].classList.remove('active');
+        currentSlide = (n + slides.length) % slides.length;
+        slides[currentSlide].classList.add('active');
+    }
+    
+    function nextSlide() { showSlide(currentSlide + 1); }
+    function prevSlide() { showSlide(currentSlide - 1); }
+    
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight') nextSlide();
+        if (e.key === 'ArrowLeft') prevSlide();
+    });
+</script>
+<div class="nav">
+    <button onclick="prevSlide()">← Previous</button>
+    <button onclick="nextSlide()">Next →</button>
+</div>
+</html>
